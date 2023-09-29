@@ -5,6 +5,8 @@
 #ifndef BLAS_CU_H_
 #define BLAS_CU_H_
 
+namespace CudaImpl {
+
 /**
  * Basic level 1 routine
  *  y <- a*x + y, a generalized vector addition
@@ -63,5 +65,7 @@ void gemm (int64_t m,
            float* B,
            float beta,
            float* C);
+
+} // namespace
 
 #endif /* BLAS_CU_H_ */

@@ -9,6 +9,8 @@
 #define TILE_WIDTH 16
 #define FLAT_WIDTH 256
 
+namespace CudaImpl {
+
 __global__
 void axpy (int64_t n, 
            float alpha, 
@@ -109,3 +111,5 @@ void gemm (int64_t m,
         C[row * m + col] = p + beta * C[row * m + col];
     }
 }
+
+} // namespace
