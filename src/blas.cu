@@ -39,17 +39,20 @@ void gemv (int64_t m,
 
     float p = 0;
 
+    // TILING: Peform dot product in phases
     for (int64_t ph = 0; ph < ceil(n/(float)FLAT_WIDTH); ++ph) {
+        // Boundary check on x
         if (row < m && (ph * FLAT_WIDTH + tx) < n) {
             xds[tx] = x[ph * FLAT_WIDTH + tx];
         }
-        else {
+        else if (tx < FLAT_WIDTH) {
             xds[tx] = 0.0f;
         }
 
         __syncthreads();
 
         if (row < m) {
+            // Perform dot product for current phase
             for (int64_t i = 0, j = ph*FLAT_WIDTH; i < FLAT_WIDTH && j < n; ++i, ++j) {
                 p += alpha * A[row * n + j] * xds[i];
             }
@@ -84,41 +87,34 @@ void gemm (int64_t m,
 
     float p = 0;
 
+    // TILING: Peform dot product in phases
     for (int ph = 0; ph < ceil(k/(float)TILE_WIDTH); ++ph) {
+        // Boundary check on A
         if (row < m && (ph*TILE_WIDTH+tx) < k) {
             Ads[ty][tx] = A[row * k + ph*TILE_WIDTH + tx];
-            //printf("A is not zero\n");
         }
         else if (tx < TILE_WIDTH && ty < TILE_WIDTH) {
             Ads[ty][tx] = 0.0f;
         }
-        //printf("bx: %d, by: %d, tx: %d, ty: %d, (ph*TILE_WIDTH+ty): %d, k: %ld, col: %d, n: %ld\n",
-        //       bx, by, tx, ty, (ph*TILE_WIDTH+ty), k, col, n);
-        int b_row = ph * TILE_WIDTH + ty;
-        if (b_row == col && b_row < k && col < n) {
-            //printf("B(%d, %d)=%f\n", b_row, col, B[b_row*n + col]);
-        }
+        // Boundary check on B
         if ((ph*TILE_WIDTH+ty) < k && col < n) {
             Bds[ty][tx] = B[(ph*TILE_WIDTH + ty)*n + col];
-            //printf("here: %f\n", Bds[ty][tx]);
         }
         else if (tx < TILE_WIDTH && ty < TILE_WIDTH) {
             Bds[ty][tx] = 0.0f;
         }
+        // ensure data loaded into shared memory for all threads
         __syncthreads();
 
         for (int k_ = 0; k_ < TILE_WIDTH; ++k_) {
             p += alpha * Ads[ty][k_] * Bds[k_][tx];
         }
-        if (p < 0 || p > 0) {
-            //printf("here\n");
-        }
+        // ensure shared memory used before overwritten
         __syncthreads();
     }
 
     if (row < m && col < n) {
         C[row * n + col] = p + beta * C[row * n + col];
-        //printf("C[%d,%d]=%f\n", row, col, C[row*m+col]);
     }
 }
 
@@ -131,7 +127,7 @@ void axpy (int64_t n,
            float* x,
            float* y)
 {
-    Kernel::axpy<<<ceil (n/256.0), 256>>> (
+    Kernel::axpy<<<ceil (n/(float)FLAT_WIDTH), FLAT_WIDTH>>> (
         n,
         alpha,
         x,
@@ -146,7 +142,7 @@ void gemv (int64_t m,
            float beta,
            float* y)
 {
-    Kernel::gemv<<<ceil (n/256.0), 256>>> (
+    Kernel::gemv<<<ceil (n/(float)FLAT_WIDTH), FLAT_WIDTH>>> (
         m,
         n,
         alpha,
