@@ -16,7 +16,7 @@ namespace CudaImpl {
  * @param x: Input vector x
  * @param y: Output vector y
  */
-__global__
+//__global__
 void axpy (int64_t n, 
            float alpha, 
            float* x, 
@@ -34,7 +34,7 @@ void axpy (int64_t n,
  * @param beta: Scaling factor for vector y
  * @param y: Output vector y
  */
-__global__
+//__global__
 void gemv (int64_t m, 
            int64_t n, 
            float alpha, 
@@ -56,7 +56,7 @@ void gemv (int64_t m,
  *  @param beta: Scaling factor for matrix C
  *  @param C: Output matrix C
  */
-__global__
+//__global__
 void gemm (int64_t m,
            int64_t n,
            int64_t k,
